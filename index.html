@@ -58,6 +58,12 @@ if ( !window.console ) {
     };
 };
 
+if(typeof remoteurl == 'undefined') {
+  console.log('remoteurl not set', remoteurl);
+  remoteurl = './fallback.js';
+  console.log('using fallback url', remoteurl);
+}
+
 $(document).foundation();
 $(function() {
 
@@ -70,10 +76,7 @@ $(function() {
   // var remoteurl = "https://api.spark.io/v1/devices/YOUR_DEVICE_ID_HERE/beatBuffer?access_token=YOUR_ACCESS_TOKEN_HERE"
   // where the the values YOUR_DEVICE_ID_HERE and YOUR_ACCESS_TOKEN_HERE
   // should be replaced with your custom urls
-  if(typeof remoteurl == 'undefined') {
-    console.log('using fallback url');
-    var remoteurl = './fallback.js';
-  }
+
   function drawgraph(average){
     //console.log('drawing', sts, timeid, ibi);
 
@@ -125,7 +128,7 @@ $(function() {
       $('.average').addClass('error');
 
       $('.average').text('tracker is offline');
-
+      clearInterval(refreshIntervalId);
     });
   }
 
@@ -152,7 +155,7 @@ $(function() {
   });
 
   // Auto refresh of the dynamic stats
-  setInterval(function() {
+  var refreshIntervalId = setInterval(function() {
     dynamic_stats(remoteurl);
   }, 890); // not really every second, just a little bit faster
 
