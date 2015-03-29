@@ -1,0 +1,162 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monitor</title>
+<link rel="stylesheet" href="css/foundation.css" />
+<script src="js/vendor/modernizr.js"></script>
+<script type="text/javascript" src="smoothie/smoothie.js"></script>
+<script type="text/javascript" src="smoothie/examples/heartmonitor.js"></script>
+</head>
+<body>
+
+<div class="row">
+  <div class="small-12 large-12 columns">
+    <p>This heartrate monitor script is a small project that was built as a demo at the  <a href="http://www.lorentzcenter.nl/lc/web/2015/688/info.php3?wsid=688&venue=Oort">&quot;Social Support TAT: Theory, Applications, and Technology workshop&quot;</a> from 16 Mar 2015 through 20 Mar 2015.</p>
+    <p>The script will monitor the heartrate on the <a href="http://shebsheb-experiments.de/2014/10/prototype-3-wristband-with-heart-rate-feedback/">wristband heartrate monitors</a> built by Bernd Dudzik.</p>
+  </div>
+
+  <div class="small-12 large-8 columns">
+    <label class="label">realtime</label>
+    <div class="panel">
+      <canvas id="monitor" class="monitor" width="360" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="small-12 large-4 columns">
+    <div class="panel">
+      <label class="label">current</label>
+      <div>
+        <span class="average">--</span>
+        <span>bpm</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="small-12 large-4 columns">
+      <p>This heartratemonitor is built with the following tools:</p>
+      <ul>
+        <li><a href="http://foundation.zurb.com">Foundation</a> for a quick layout</li>
+        <li><a href="http://www.jquery.com">jQuery</a> for the javascript to tie it all together</li>
+        <li><a href="http://smoothiecharts.org">Smoothie charts</a> for the charting</li>
+        <li><a href="https://github.com/jadwigo/heartratemonitor/">Get the code on github</a></li>
+      </ul>
+  </div>
+</div>
+<script src="js/vendor/jquery.js"></script>
+<script src="js/foundation.min.js"></script>
+<script src="remoteurl.js"></script>
+<script>
+//Console.log Fallback for Internet Explorer
+if ( !window.console ) {
+    window.console = new function() {
+        this.log = function(str) {};
+        this.dir = function(str) {};
+    };
+};
+
+$(document).foundation();
+$(function() {
+
+  var sts = new Date().getTime(); //starttimestamp
+
+  var line1 = new TimeSeries();
+
+  // Create a file called remoteurl.js
+  // in that file there should be the following line:
+  // var remoteurl = "https://api.spark.io/v1/devices/YOUR_DEVICE_ID_HERE/beatBuffer?access_token=YOUR_ACCESS_TOKEN_HERE"
+  // where the the values YOUR_DEVICE_ID_HERE and YOUR_ACCESS_TOKEN_HERE
+  // should be replaced with your custom urls
+  if(typeof remoteurl == 'undefined') {
+    console.log('using fallback url');
+    var remoteurl = './fallback.js';
+  }
+  function drawgraph(average){
+    //console.log('drawing', sts, timeid, ibi);
+
+    // set time stamp
+    //var now = sts + (timeid * 100);
+    var now = new Date().getTime();
+    // BPM display
+    var bpm = Math.round(60000 / average);
+    $('.average').text(bpm);
+
+    //console.log('drawing', average, bpm);
+    //line1.append(new Date().getTime(), bpm);
+    line1.append(now, bpm);
+  };
+
+
+  function dynamic_stats(url) {
+    $.get(url, function(data) {
+      //$("div#dynamicstats").html(data);
+      // sts = data.timestamp ? data.timstamp : new Date().getTime();
+      // console.log(sts);
+      //console.log(data.result);
+      var arr = data.result.split(';');
+      var average = 0;
+      for(var i=0; i < 6; i++){
+        
+        //console.log('a', i, arr[i]);
+        var keys = arr[i].split(',');
+        //console.log('b', typeof keys, keys);
+        if(keys != "") {
+          var timeid = parseInt(keys[0]);
+          var ibi = parseInt(keys[1]);
+
+          //console.log('timeid:', timeid, 'ibi:', ibi, typeof ibi);
+          // if(typeof ibi == 'number') {
+          //   drawgraph(timeid, ibi);
+          // }
+          average = ibi + average;
+          console.log(average, ibi);
+        }
+      }
+      average = average / 6;
+
+      drawgraph(average);
+      $('.average').removeClass('error');
+    }).fail(function() {
+      var average = 800; // this will become 75
+      drawgraph(average);
+      $('.average').addClass('error');
+
+      $('.average').text('tracker is offline');
+
+    });
+  }
+
+  // Initialize the graphing code once on load
+  $(function() {
+    dynamic_stats(remoteurl);
+
+    var smoothie = new SmoothieChart({
+      grid: { 
+        strokeStyle: 'rgb(125, 0, 0)', 
+        fillStyle: 'rgb(60, 0, 0)', 
+        lineWidth: 1, 
+        millisPerLine: 250, 
+        verticalSections: 6
+      } 
+    });
+    smoothie.addTimeSeries(
+      line1, { 
+        strokeStyle: 'rgb(0, 255, 0)', 
+        fillStyle: 'rgba(0, 60, 0, 0.2)', 
+        lineWidth: 2
+      });
+    smoothie.streamTo(document.getElementById("monitor"), 250);
+  });
+
+  // Auto refresh of the dynamic stats
+  setInterval(function() {
+    dynamic_stats(remoteurl);
+  }, 890); // not really every second, just a little bit faster
+
+});
+</script>
+</body>
+</html>
